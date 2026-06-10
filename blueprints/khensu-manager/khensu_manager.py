@@ -1218,7 +1218,8 @@ class KhensuManager(Blueprint):
 
     @view
     def get_last_n_tokens(self, number: int, offset: TokenUid) -> str:
-        """Get N most recently accessed tokens from LRU cache starting after offset."""
+        """Get N most recently accessed tokens from LRU cache starting after offset. N <= 200."""
+        LIMIT = 200
         number = max(number, 0)
         last_tokens = []
         current = self.lru_head
@@ -1227,7 +1228,7 @@ class KhensuManager(Blueprint):
             if offset in self.lru_next:
                 current = self.lru_next[offset]
 
-        for _ in range(min(number, self.lru_cache_size)):
+        for _ in range(min(number, self.lru_cache_size, LIMIT)):
             if current == self.lru_null_token:
                 break
             last_tokens.append(current.hex())
@@ -1240,42 +1241,49 @@ class KhensuManager(Blueprint):
 
     @view
     def get_newest_n_tokens(self, number: int, offset: int) -> str:
-        """Get N newly created tokens after a given offset (reverse order)"""
+        """Get N newly created tokens after a given offset (reverse order). N <= 200."""
+        LIMIT = 200
         number = max(number, 0)
         offset = max(offset, 0)
-        newest_tokens = []
         n = len(self.all_tokens)
 
+        available_tokens = max(0, n - offset)
+        number = min(number, available_tokens, LIMIT)
+        newest_tokens = []
+
         for i in range(-1 - offset, -1 - offset - number, -1):
-            if -n <= i < 0:
-                newest_tokens.append(self.all_tokens[i].hex())
+            newest_tokens.append(self.all_tokens[i].hex())
 
         return " ".join(newest_tokens)
 
     @view
     def get_oldest_n_tokens(self, number: int, offset: int) -> str:
-        """Get N oldest tokens after a given offset"""
+        """Get N oldest tokens after a given offset. N <= 200."""
+        LIMIT = 200
         number = max(number, 0)
         offset = max(offset, 0)
         oldest_tokens = []
         n = len(self.all_tokens)
 
-        for i in range(offset, min(offset + number, n)):
+        for i in range(offset, min(offset + number, n, LIMIT)):
             oldest_tokens.append(self.all_tokens[i].hex())
 
         return " ".join(oldest_tokens)
 
     @view
     def get_recently_graduated_tokens(self, number: int, offset: int) -> str:
-        """Get N recently graduated tokens (reverse order)"""
+        """Get N recently graduated tokens (reverse order). N <= 200."""
+        LIMIT = 200
         number = max(number, 0)
         offset = max(offset, 0)
-        recent_graduated_tokens = []
         n = len(self.graduated_tokens)
 
+        available_tokens = max(0, n - offset)
+        number = min(number, available_tokens, LIMIT)
+        recent_graduated_tokens = []
+
         for i in range(-1 - offset, -1 - offset - number, -1):
-            if -n <= i < 0:
-                recent_graduated_tokens.append(self.graduated_tokens[i].hex())
+            recent_graduated_tokens.append(self.graduated_tokens[i].hex())
 
         return " ".join(recent_graduated_tokens)
 
@@ -1283,7 +1291,8 @@ class KhensuManager(Blueprint):
     def get_tokens_created_by_user(
         self, user_address: CallerId, number: int, offset: int
     ) -> str:
-        """Get N newest tokens created by a user after a given offset (reverse order)"""
+        """Get N newest tokens created by a user after a given offset (reverse order). N <= 200."""
+        LIMIT = 200
         number = max(number, 0)
         offset = max(offset, 0)
         newest_tokens = []
@@ -1292,9 +1301,11 @@ class KhensuManager(Blueprint):
             token_list = self.user_creations[user_address]
         n = len(token_list)
 
+        available_tokens = max(0, n - offset)
+        number = min(number, available_tokens, LIMIT)
+
         for i in range(-1 - offset, -1 - offset - number, -1):
-            if -n <= i < 0:
-                newest_tokens.append(token_list[i].hex())
+            newest_tokens.append(token_list[i].hex())
 
         return " ".join(newest_tokens)
 
